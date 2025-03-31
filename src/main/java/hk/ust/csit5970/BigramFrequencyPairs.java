@@ -53,6 +53,19 @@ public class BigramFrequencyPairs extends Configured implements Tool {
 			/*
 			 * TODO: Your implementation goes here.
 			 */
+			int words_len = words.length;
+			if(words_len < 2){
+				return;
+			}
+			for (int i = 0; i < words_len - 1; i++) {
+				if(words[i].length() == 0 || words[i + 1].length() == 0){
+					continue;
+				}
+				BIGRAM.set(words[i], words[i + 1]);
+				context.write(BIGRAM, ONE);
+				BIGRAM.set(words[i], "");
+				context.write(BIGRAM, ONE);
+			}
 		}
 	}
 
@@ -64,13 +77,32 @@ public class BigramFrequencyPairs extends Configured implements Tool {
 
 		// Reuse objects.
 		private final static FloatWritable VALUE = new FloatWritable();
-
+		private int frequency = 0;
 		@Override
 		public void reduce(PairOfStrings key, Iterable<IntWritable> values,
 				Context context) throws IOException, InterruptedException {
+
 			/*
 			 * TODO: Your implementation goes here.
 			 */
+			if (key.getRightElement().equals("")) {
+				frequency = 0;
+				for (IntWritable val : values) {
+					frequency += val.get();
+				}
+				VALUE.set((float) frequency);
+				context.write(key, VALUE);
+			} else {
+				// 计算特定二元组的出现次数
+				int count = 0;
+				for (IntWritable val : values) {
+					count += val.get();
+				}
+				if (frequency > 0) {
+					VALUE.set((float) count / frequency);
+					context.write(key, VALUE);
+				}
+			}
 		}
 	}
 	
@@ -84,6 +116,12 @@ public class BigramFrequencyPairs extends Configured implements Tool {
 			/*
 			 * TODO: Your implementation goes here.
 			 */
+			int sum = 0;
+			for (IntWritable val : values) {
+				sum += val.get();
+			}
+			SUM.set(sum);
+			context.write(key, SUM);
 		}
 	}
 
@@ -200,3 +238,4 @@ public class BigramFrequencyPairs extends Configured implements Tool {
 		ToolRunner.run(new BigramFrequencyPairs(), args);
 	}
 }
+
