@@ -93,7 +93,6 @@ public class BigramFrequencyPairs extends Configured implements Tool {
 				VALUE.set((float) frequency);
 				context.write(key, VALUE);
 			} else {
-				// 计算特定二元组的出现次数
 				int count = 0;
 				for (IntWritable val : values) {
 					count += val.get();

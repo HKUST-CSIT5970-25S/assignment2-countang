@@ -16,7 +16,6 @@ import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.FloatWritable;
-import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Job;
@@ -54,6 +53,17 @@ public class BigramFrequencyStripes extends Configured implements Tool {
 			/*
 			 * TODO: Your implementation goes here.
 			 */
+			if (words.length < 2) return;
+
+			for (int i = 0; i < words.length - 1; i++) {
+				if (words[i].length() == 0 || words[i + 1].length() == 0){
+					continue;
+				}
+				KEY.set(words[i]);
+				STRIPE.clear();
+				STRIPE.increment(words[i + 1]);
+				context.write(KEY, STRIPE);
+			}
 		}
 	}
 
@@ -70,11 +80,32 @@ public class BigramFrequencyStripes extends Configured implements Tool {
 
 		@Override
 		public void reduce(Text key,
-				Iterable<HashMapStringIntWritable> stripes, Context context)
+						   Iterable<HashMapStringIntWritable> stripes, Context context)
 				throws IOException, InterruptedException {
 			/*
 			 * TODO: Your implementation goes here.
 			 */
+			HashMapStringIntWritable combinedStripe = new HashMapStringIntWritable();
+			for (HashMapStringIntWritable stripe : stripes) {
+				for (Map.Entry<String, Integer> pair : stripe.entrySet()) {
+					combinedStripe.increment(pair.getKey(), pair.getValue());
+				}
+			}
+
+			int sum = 0;
+			for (int count : combinedStripe.values()) {
+				sum += count;
+			}
+
+			BIGRAM.set(key.toString(), "");
+			FREQ.set((float) sum);
+			context.write(BIGRAM, FREQ);
+
+			for (Map.Entry<String, Integer> pair : combinedStripe.entrySet()) {
+				BIGRAM.set(key.toString(), pair.getKey());
+				FREQ.set((float) pair.getValue() / sum);
+				context.write(BIGRAM, FREQ);
+			}
 		}
 	}
 
@@ -89,11 +120,19 @@ public class BigramFrequencyStripes extends Configured implements Tool {
 
 		@Override
 		public void reduce(Text key,
-				Iterable<HashMapStringIntWritable> stripes, Context context)
+						   Iterable<HashMapStringIntWritable> stripes, Context context)
 				throws IOException, InterruptedException {
 			/*
 			 * TODO: Your implementation goes here.
 			 */
+			HashMapStringIntWritable combinedStripe = new HashMapStringIntWritable();
+
+			for (HashMapStringIntWritable stripe : stripes) {
+				for (Map.Entry<String, Integer> pair : stripe.entrySet()) {
+					combinedStripe.increment(pair.getKey(), pair.getValue());
+				}
+			}
+			context.write(key, combinedStripe);
 		}
 	}
 
