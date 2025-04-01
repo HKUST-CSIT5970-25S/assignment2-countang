@@ -37,7 +37,6 @@ import java.util.HashMap;
  */
 public class CORPairs extends Configured implements Tool {
 	private static final Logger LOG = Logger.getLogger(CORPairs.class);
-
 	/*
 	 * TODO: Write your first-pass Mapper here.
 	 */
@@ -53,6 +52,15 @@ public class CORPairs extends Configured implements Tool {
 			/*
 			 * TODO: Your implementation goes here.
 			 */
+			Text word = new Text();
+			IntWritable SINGLE = new IntWritable(1);
+			while (doc_tokenizer.hasMoreTokens()) {
+				String token = doc_tokenizer.nextToken();
+				if (token.length() > 0) {
+					word.set(token);
+					context.write(word, SINGLE);
+				}
+			}
 		}
 	}
 
@@ -66,6 +74,13 @@ public class CORPairs extends Configured implements Tool {
 			/*
 			 * TODO: Your implementation goes here.
 			 */
+			IntWritable total = new IntWritable();
+			int sum = 0;
+			for (IntWritable val : values) {
+				sum += val.get();
+			}
+			total.set(sum);
+			context.write(key, total);
 		}
 	}
 
@@ -81,6 +96,30 @@ public class CORPairs extends Configured implements Tool {
 			/*
 			 * TODO: Your implementation goes here.
 			 */
+			IntWritable SINGLE = new IntWritable(1);
+			Set<String> sorted_word_set = new TreeSet<String>();
+			while (doc_tokenizer.hasMoreTokens()) {
+				String token = doc_tokenizer.nextToken();
+				if (token.length() > 0) {
+					sorted_word_set.add(token);
+				}
+			}
+
+			List<String> wordList = new ArrayList<String>(sorted_word_set);
+
+			PairOfStrings BIGRAM = new PairOfStrings();
+			for (int i = 0; i < wordList.size(); i++) {
+				for (int j = i + 1; j < wordList.size(); j++) {
+					String wordA = wordList.get(i);
+					String wordB = wordList.get(j);
+					if (wordA.compareTo(wordB) < 0) {
+						BIGRAM.set(wordA, wordB);
+					} else {
+						BIGRAM.set(wordB, wordA);
+					}
+					context.write(BIGRAM, SINGLE);
+				}
+			}
 		}
 	}
 
@@ -93,6 +132,13 @@ public class CORPairs extends Configured implements Tool {
 			/*
 			 * TODO: Your implementation goes here.
 			 */
+			IntWritable temp = new IntWritable();
+			int sum = 0;
+			for (IntWritable val : values) {
+				sum += val.get();
+			}
+			temp.set(sum);
+			context.write(key, temp);
 		}
 	}
 
@@ -145,6 +191,24 @@ public class CORPairs extends Configured implements Tool {
 			/*
 			 * TODO: Your implementation goes here.
 			 */
+			int frequency = 0;
+			for (IntWritable val : values) {
+				frequency += val.get();
+			}
+
+			// 获取两个单词的单独频率
+			String word_left = key.getLeftElement();
+			String word_right = key.getRightElement();
+
+			Integer freq_left = word_total_map.get(word_left);
+			Integer freq_right = word_total_map.get(word_right);
+			DoubleWritable result = new DoubleWritable();
+
+			if (freq_left != null && freq_right != null && freq_left > 0 && freq_right > 0) {
+				double correlation = (double) frequency / (freq_left * freq_right);
+				result.set(correlation);
+				context.write(key, result);
+			}
 		}
 	}
 
